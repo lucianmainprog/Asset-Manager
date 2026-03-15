@@ -13,7 +13,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Colors from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
-import { CourseCard } from "@/components/CourseCard";
 
 const FILTERS = ["All", "Beginner", "Intermediate", "Advanced"];
 
@@ -25,8 +24,8 @@ export default function LearnScreen() {
   const { courses } = useApp();
   const [activeFilter, setActiveFilter] = useState("All");
 
-  const topPadding = Platform.OS === "web" ? 67 : insets.top + 10;
-  const bottomPadding = Platform.OS === "web" ? 34 + 84 : insets.bottom + 80;
+  const topPadding = Platform.OS === "web" ? 67 : insets.top + 16;
+  const bottomPadding = Platform.OS === "web" ? 34 + 84 : insets.bottom + 90;
 
   const filtered = activeFilter === "All"
     ? courses
@@ -40,32 +39,17 @@ export default function LearnScreen() {
       contentInsetAdjustmentBehavior="automatic"
     >
       <View style={styles.header}>
-        <Text style={[styles.screenTitle, { color: colors.text }]}>Learn</Text>
-        <Text style={[styles.screenSub, { color: colors.textSecondary }]}>
-          {courses.length} courses available
-        </Text>
+        <Text style={[styles.screenTitle, { color: colors.text }]}>Courses</Text>
+        <Text style={[styles.screenSub, { color: colors.textMuted }]}>{courses.length} available</Text>
       </View>
 
-      <View style={styles.stats}>
-        <View style={[styles.statPill, { backgroundColor: isDark ? "#1E3A8A22" : "#EFF6FF", borderColor: isDark ? "#1E3A8A55" : "#BFDBFE" }]}>
-          <Feather name="book-open" size={14} color={colors.accent} />
-          <Text style={[styles.statPillText, { color: colors.accent }]}>
-            {courses.filter((c) => c.completedLessons > 0).length} in progress
-          </Text>
-        </View>
-        <View style={[styles.statPill, { backgroundColor: isDark ? "#10B98122" : "#ECFDF5", borderColor: isDark ? "#10B98144" : "#A7F3D0" }]}>
-          <Feather name="check-circle" size={14} color="#10B981" />
-          <Text style={[styles.statPillText, { color: "#10B981" }]}>
-            {courses.filter((c) => c.completedLessons === c.totalLessons && c.totalLessons > 0).length} completed
-          </Text>
-        </View>
-      </View>
+      <View style={[styles.divider, { backgroundColor: colors.separator }]} />
 
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.filtersContainer}
         contentContainerStyle={styles.filters}
+        style={styles.filtersScroll}
       >
         {FILTERS.map((f) => (
           <Pressable
@@ -74,222 +58,94 @@ export default function LearnScreen() {
             style={[
               styles.filterBtn,
               {
-                backgroundColor:
-                  activeFilter === f ? colors.accent : colors.card,
-                borderColor:
-                  activeFilter === f ? colors.accent : colors.cardBorder,
+                backgroundColor: activeFilter === f ? colors.text : "transparent",
+                borderColor: activeFilter === f ? colors.text : colors.cardBorder,
               },
             ]}
           >
-            <Text
-              style={[
-                styles.filterText,
-                { color: activeFilter === f ? "#FFFFFF" : colors.textSecondary },
-              ]}
-            >
+            <Text style={[styles.filterText, { color: activeFilter === f ? colors.background : colors.textSecondary }]}>
               {f}
             </Text>
           </Pressable>
         ))}
       </ScrollView>
 
-      <View style={styles.coursesList}>
-        {filtered.map((course) => (
-          <Pressable
-            key={course.id}
-            onPress={() => router.push(`/lesson/${course.id}`)}
-            style={({ pressed }) => [styles.fullCardWrapper, { opacity: pressed ? 0.9 : 1 }]}
-          >
-            <View
-              style={[
-                styles.fullCard,
-                { backgroundColor: colors.card, borderColor: colors.cardBorder },
-              ]}
+      <View style={styles.list}>
+        {filtered.map((course, index) => {
+          const progress = course.totalLessons > 0 ? course.completedLessons / course.totalLessons : 0;
+          const isLast = index === filtered.length - 1;
+          return (
+            <Pressable
+              key={course.id}
+              onPress={() => router.push(`/lesson/${course.id}`)}
+              style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
             >
-              <View style={[styles.langIcon, { backgroundColor: course.color + "22" }]}>
-                <Feather name={course.icon as any} size={26} color={course.color} />
-              </View>
-              <View style={styles.cardInfo}>
-                <View style={styles.cardTopRow}>
-                  <Text style={[styles.courseTitle, { color: colors.text }]}>{course.title}</Text>
-                  <View
-                    style={[
-                      styles.diffBadge,
-                      {
-                        backgroundColor:
-                          course.difficulty === "Beginner"
-                            ? "#10B98122"
-                            : course.difficulty === "Intermediate"
-                            ? "#F59E0B22"
-                            : "#EF444422",
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.diffText,
-                        {
-                          color:
-                            course.difficulty === "Beginner"
-                              ? "#10B981"
-                              : course.difficulty === "Intermediate"
-                              ? "#F59E0B"
-                              : "#EF4444",
-                        },
-                      ]}
-                    >
+              <View style={styles.courseRow}>
+                <View style={[styles.langDot, { backgroundColor: course.color }]} />
+                <View style={styles.courseInfo}>
+                  <View style={styles.courseTopRow}>
+                    <Text style={[styles.courseTitle, { color: colors.text }]}>{course.title}</Text>
+                    <Text style={[styles.diffBadge, {
+                      color: course.difficulty === "Beginner" ? colors.accentGreen :
+                             course.difficulty === "Intermediate" ? "#D97706" : colors.danger
+                    }]}>
                       {course.difficulty}
                     </Text>
                   </View>
-                </View>
-                <Text style={[styles.courseDesc, { color: colors.textSecondary }]} numberOfLines={1}>
-                  {course.description}
-                </Text>
-                <View style={styles.cardFooter}>
-                  <View style={[styles.progressBar, { backgroundColor: colors.backgroundTertiary }]}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        {
-                          width: `${(course.completedLessons / course.totalLessons) * 100}%`,
-                          backgroundColor: course.color,
-                        },
-                      ]}
-                    />
-                  </View>
-                  <Text style={[styles.lessonCount, { color: colors.textMuted }]}>
-                    {course.completedLessons}/{course.totalLessons}
+                  <Text style={[styles.courseDesc, { color: colors.textMuted }]} numberOfLines={1}>
+                    {course.description}
                   </Text>
+                  <View style={styles.courseFooter}>
+                    <View style={[styles.progressTrack, { backgroundColor: colors.backgroundTertiary }]}>
+                      <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: course.color }]} />
+                    </View>
+                    <Text style={[styles.lessonCount, { color: colors.textMuted }]}>
+                      {course.completedLessons}/{course.totalLessons}
+                    </Text>
+                  </View>
                 </View>
+                <Feather name="chevron-right" size={16} color={colors.textMuted} />
               </View>
-              <Feather name="chevron-right" size={18} color={colors.textMuted} />
-            </View>
-          </Pressable>
-        ))}
+              {!isLast && <View style={[styles.rowDivider, { backgroundColor: colors.separator }]} />}
+            </Pressable>
+          );
+        })}
       </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
-    gap: 4,
-  },
-  screenTitle: {
-    fontSize: 32,
-    fontFamily: "Inter_700Bold",
-  },
-  screenSub: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-  },
-  stats: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    gap: 10,
-    marginBottom: 16,
-  },
-  statPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 12,
+  container: { flex: 1 },
+  header: { paddingHorizontal: 20, marginBottom: 16 },
+  screenTitle: { fontSize: 28, fontFamily: "Inter_700Bold" },
+  screenSub: { fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 },
+  divider: { height: 1, marginHorizontal: 20, marginBottom: 16 },
+  filtersScroll: { marginBottom: 8 },
+  filters: { paddingHorizontal: 20, gap: 8 },
+  filterBtn: {
+    paddingHorizontal: 16,
     paddingVertical: 6,
     borderRadius: 20,
     borderWidth: 1,
   },
-  statPillText: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-  },
-  filtersContainer: {
-    marginBottom: 16,
-  },
-  filters: {
-    paddingHorizontal: 20,
-    gap: 8,
-  },
-  filterBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  filterText: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-  },
-  coursesList: {
-    paddingHorizontal: 20,
-    gap: 10,
-  },
-  fullCardWrapper: {},
-  fullCard: {
+  filterText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  list: { paddingHorizontal: 20, marginTop: 8 },
+  courseRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
+    gap: 14,
+    paddingVertical: 14,
   },
-  langIcon: {
-    width: 54,
-    height: 54,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  cardInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  cardTopRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  courseTitle: {
-    fontSize: 16,
-    fontFamily: "Inter_700Bold",
-  },
-  diffBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  diffText: {
-    fontSize: 10,
-    fontFamily: "Inter_600SemiBold",
-  },
-  courseDesc: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-  },
-  cardFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 4,
-  },
-  progressBar: {
-    flex: 1,
-    height: 3,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 2,
-  },
-  lessonCount: {
-    fontSize: 11,
-    fontFamily: "Inter_500Medium",
-    width: 32,
-    textAlign: "right",
-  },
+  langDot: { width: 10, height: 10, borderRadius: 5 },
+  courseInfo: { flex: 1, gap: 4 },
+  courseTopRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  courseTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
+  diffBadge: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  courseDesc: { fontSize: 12, fontFamily: "Inter_400Regular" },
+  courseFooter: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 2 },
+  progressTrack: { flex: 1, height: 2, borderRadius: 1, overflow: "hidden" },
+  progressFill: { height: "100%", borderRadius: 1 },
+  lessonCount: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  rowDivider: { height: 1, marginLeft: 24 },
 });

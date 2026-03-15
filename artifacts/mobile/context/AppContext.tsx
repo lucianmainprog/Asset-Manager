@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import createContextHook from "@nkzw/create-context-hook";
 import React, { useState, useEffect, useCallback } from "react";
+import { LESSON_DATA } from "@/data/lessonData";
 
 export interface Course {
   id: string;
@@ -14,15 +15,6 @@ export interface Course {
   icon: string;
   color: string;
   description: string;
-}
-
-export interface Lesson {
-  id: string;
-  courseId: string;
-  title: string;
-  content: string;
-  completed: boolean;
-  xp: number;
 }
 
 export interface Challenge {
@@ -75,7 +67,7 @@ export const COURSES: Course[] = [
     language: "HTML",
     category: "programming",
     difficulty: "Beginner",
-    totalLessons: 12,
+    totalLessons: LESSON_DATA.html?.length ?? 15,
     completedLessons: 0,
     xpReward: 50,
     icon: "code",
@@ -88,7 +80,7 @@ export const COURSES: Course[] = [
     language: "CSS",
     category: "programming",
     difficulty: "Beginner",
-    totalLessons: 15,
+    totalLessons: LESSON_DATA.css?.length ?? 14,
     completedLessons: 0,
     xpReward: 50,
     icon: "layers",
@@ -101,11 +93,11 @@ export const COURSES: Course[] = [
     language: "JavaScript",
     category: "programming",
     difficulty: "Intermediate",
-    totalLessons: 20,
+    totalLessons: LESSON_DATA.javascript?.length ?? 15,
     completedLessons: 0,
     xpReward: 75,
     icon: "zap",
-    color: "#F7DF1E",
+    color: "#CA8A04",
     description: "Make your websites interactive with JavaScript",
   },
   {
@@ -114,7 +106,7 @@ export const COURSES: Course[] = [
     language: "Python",
     category: "programming",
     difficulty: "Beginner",
-    totalLessons: 18,
+    totalLessons: LESSON_DATA.python?.length ?? 15,
     completedLessons: 0,
     xpReward: 75,
     icon: "terminal",
@@ -127,7 +119,7 @@ export const COURSES: Course[] = [
     language: "C#",
     category: "programming",
     difficulty: "Intermediate",
-    totalLessons: 16,
+    totalLessons: LESSON_DATA.csharp?.length ?? 12,
     completedLessons: 0,
     xpReward: 100,
     icon: "cpu",
@@ -140,7 +132,7 @@ export const COURSES: Course[] = [
     language: "C++",
     category: "programming",
     difficulty: "Advanced",
-    totalLessons: 14,
+    totalLessons: LESSON_DATA.cpp?.length ?? 13,
     completedLessons: 0,
     xpReward: 100,
     icon: "activity",
@@ -266,16 +258,28 @@ const [AppProvider, useApp] = createContextHook(() => {
 
   const loadData = async () => {
     try {
-      const [profileData, coursesData, challengesData, achievementsData] = await Promise.all([
+      const [profileData, challengesData, achievementsData] = await Promise.all([
         AsyncStorage.getItem("profile"),
-        AsyncStorage.getItem("courses"),
         AsyncStorage.getItem("challenges"),
         AsyncStorage.getItem("achievements"),
       ]);
-      if (profileData) setProfile(JSON.parse(profileData));
-      if (coursesData) setCourses(JSON.parse(coursesData));
+      let savedProfile: UserProfile | null = null;
+      if (profileData) {
+        savedProfile = JSON.parse(profileData);
+        setProfile(savedProfile!);
+      }
       if (challengesData) setChallenges(JSON.parse(challengesData));
       if (achievementsData) setAchievements(JSON.parse(achievementsData));
+
+      if (savedProfile) {
+        const completedSet = new Set(savedProfile.completedLessons);
+        const updatedCourses = COURSES.map((course) => {
+          const courseLessons = LESSON_DATA[course.id] || [];
+          const completed = courseLessons.filter((l) => completedSet.has(l.id)).length;
+          return { ...course, completedLessons: completed };
+        });
+        setCourses(updatedCourses);
+      }
     } catch (e) {
       console.warn("Failed to load data", e);
     } finally {
@@ -286,11 +290,6 @@ const [AppProvider, useApp] = createContextHook(() => {
   const saveProfile = useCallback(async (p: UserProfile) => {
     setProfile(p);
     await AsyncStorage.setItem("profile", JSON.stringify(p));
-  }, []);
-
-  const saveCourses = useCallback(async (c: Course[]) => {
-    setCourses(c);
-    await AsyncStorage.setItem("courses", JSON.stringify(c));
   }, []);
 
   const saveChallenges = useCallback(async (c: Challenge[]) => {
@@ -316,26 +315,32 @@ const [AppProvider, useApp] = createContextHook(() => {
 
   const completeLesson = useCallback(
     async (lessonId: string, courseId: string, xp: number) => {
-      const newProfile = {
+      const alreadyDone = profile.completedLessons.includes(lessonId);
+      const newCompletedLessons = alreadyDone
+        ? profile.completedLessons
+        : [...profile.completedLessons, lessonId];
+
+      const newXP = alreadyDone ? profile.xp : profile.xp + xp;
+      let newLevel = profile.level;
+      while (newXP >= xpForLevel(newLevel)) newLevel++;
+
+      const newProfile: UserProfile = {
         ...profile,
-        completedLessons: profile.completedLessons.includes(lessonId)
-          ? profile.completedLessons
-          : [...profile.completedLessons, lessonId],
-        xp: profile.xp + xp,
+        completedLessons: newCompletedLessons,
+        xp: newXP,
+        level: newLevel,
       };
-      let newLevel = newProfile.level;
-      while (newProfile.xp >= xpForLevel(newLevel)) newLevel++;
-      newProfile.level = newLevel;
       await saveProfile(newProfile);
 
-      const newCourses = courses.map((c) =>
-        c.id === courseId
-          ? { ...c, completedLessons: Math.min(c.completedLessons + 1, c.totalLessons) }
-          : c
-      );
-      await saveCourses(newCourses);
+      const completedSet = new Set(newCompletedLessons);
+      const updatedCourses = COURSES.map((course) => {
+        const courseLessons = LESSON_DATA[course.id] || [];
+        const completed = courseLessons.filter((l) => completedSet.has(l.id)).length;
+        return { ...course, completedLessons: completed };
+      });
+      setCourses(updatedCourses);
     },
-    [profile, courses, saveProfile, saveCourses]
+    [profile, saveProfile]
   );
 
   const completeChallenge = useCallback(
@@ -345,14 +350,18 @@ const [AppProvider, useApp] = createContextHook(() => {
       );
       await saveChallenges(newChallenges);
 
-      const newProfile = {
+      const newXP = profile.xp + xp;
+      let newLevel = profile.level;
+      while (newXP >= xpForLevel(newLevel)) newLevel++;
+
+      const newProfile: UserProfile = {
         ...profile,
-        completedChallenges: [...profile.completedChallenges, challengeId],
-        xp: profile.xp + xp,
+        completedChallenges: profile.completedChallenges.includes(challengeId)
+          ? profile.completedChallenges
+          : [...profile.completedChallenges, challengeId],
+        xp: newXP,
+        level: newLevel,
       };
-      let newLevel = newProfile.level;
-      while (newProfile.xp >= xpForLevel(newLevel)) newLevel++;
-      newProfile.level = newLevel;
       await saveProfile(newProfile);
     },
     [profile, challenges, saveProfile, saveChallenges]

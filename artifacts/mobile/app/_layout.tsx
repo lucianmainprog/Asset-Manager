@@ -29,8 +29,16 @@ function RootLayoutNav() {
         options={{
           headerShown: true,
           headerTransparent: false,
-          title: "Lesson",
+          title: "Course",
           headerBackTitle: "Back",
+        }}
+      />
+      <Stack.Screen
+        name="lesson/view/[courseId]/[lessonId]"
+        options={{
+          headerShown: true,
+          title: "Lesson",
+          headerBackTitle: "Course",
         }}
       />
       <Stack.Screen
