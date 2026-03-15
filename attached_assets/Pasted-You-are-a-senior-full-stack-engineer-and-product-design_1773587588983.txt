@@ -1,0 +1,321 @@
+You are a senior full-stack engineer and product designer.
+Your task is to design and generate the architecture and starter implementation for a **modern mobile learning platform** that teaches IT careers and programming languages.
+
+The application should be similar in concept to learning platforms like SoloLearn and Mimo but expanded to include **IT career paths, certification guidance, coding practice environments, and structured learning paths**.
+
+The platform must be scalable, secure, and designed with a modern minimalistic UI.
+
+---
+
+PROJECT NAME
+"TechJourney – IT Learning & Career Platform"
+
+---
+
+MAIN PURPOSE
+
+Create a mobile app that teaches:
+
+1. IT career paths and job roles
+2. Programming languages
+3. Certification preparation
+4. Interactive coding practice
+5. Career roadmaps and skill progression
+
+The app should help beginners progress to advanced professional levels.
+
+---
+
+TARGET USERS
+
+• Students entering the IT field
+• Career switchers
+• Junior developers and technicians
+• Intermediate developers improving skills
+
+---
+
+CORE FEATURES
+
+User authentication system
+Progress tracking
+Course modules and lessons
+Interactive coding exercises
+Career explorer section
+Gamification system
+Daily coding challenges
+Certification preparation
+User profiles with progress statistics
+Achievements and XP leveling
+
+---
+
+APP STRUCTURE
+
+Main Navigation Tabs:
+
+Home
+Learn
+Careers
+Challenges
+Profile
+
+---
+
+HOME SCREEN
+
+Display:
+
+Continue Learning
+Recommended Courses
+Daily Coding Challenge
+User XP Progress
+Learning Streak
+
+---
+
+LEARN SECTION
+
+Programming courses must include:
+
+HTML
+CSS
+JavaScript
+Python
+C#
+C++
+
+Each course contains:
+
+Beginner level
+Intermediate level
+Advanced level
+Projects
+Quizzes
+
+Each lesson includes:
+
+Concept explanation
+Code examples
+Interactive exercises
+Short quizzes
+Mini coding tasks
+
+---
+
+CAREER EXPLORER
+
+Include major IT fields:
+
+Networking
+Cybersecurity
+Software Development
+Cloud Engineering
+DevOps
+Data Science
+
+Each career page should include:
+
+Job description
+Required skills
+Recommended certifications
+Learning roadmap
+Typical tools used
+Salary estimates
+Career progression ladder
+
+---
+
+CERTIFICATIONS
+
+Include learning paths for certifications such as:
+
+Cisco CCNA
+CompTIA Network+
+CompTIA Security+
+AWS Cloud Practitioner
+Microsoft Azure Fundamentals
+
+Provide preparation quizzes and explanation sections.
+
+---
+
+CODING PRACTICE ENGINE
+
+Users must be able to run code directly inside the app.
+
+Supported languages:
+
+JavaScript
+Python
+C#
+C++
+
+The system must use secure execution through containerized environments.
+
+Architecture:
+
+Mobile App → Backend API → Code Runner → Output
+
+Use Docker containers to safely execute user code.
+
+---
+
+GAMIFICATION SYSTEM
+
+Include:
+
+XP points
+Achievement badges
+Daily streak tracking
+Leaderboards
+Skill levels
+
+XP example:
+
+Complete lesson = +50 XP
+Pass quiz = +30 XP
+Daily challenge = +100 XP
+
+---
+
+CHALLENGES SECTION
+
+Include coding problems categorized as:
+
+Beginner
+Intermediate
+Advanced
+
+Examples:
+
+Reverse a string
+Find prime numbers
+Palindrome detection
+Binary tree traversal
+
+---
+
+TECH STACK
+
+Mobile Application:
+
+Flutter (cross-platform Android and iOS)
+
+Backend:
+
+Node.js with Express OR Python FastAPI
+
+Database:
+
+PostgreSQL
+
+Authentication:
+
+JWT tokens
+
+Cloud Infrastructure:
+
+AWS or Google Cloud
+
+Use Docker containers for code execution environments.
+
+---
+
+DATABASE STRUCTURE
+
+Users Table
+id
+name
+email
+password
+xp
+level
+created_at
+
+Courses Table
+id
+title
+category
+difficulty
+
+Lessons Table
+id
+course_id
+title
+content
+lesson_order
+
+Progress Table
+user_id
+lesson_id
+completed
+score
+
+Challenges Table
+id
+title
+difficulty
+problem_description
+solution
+
+---
+
+UI DESIGN REQUIREMENTS
+
+Modern minimalistic interface
+Dark mode support
+Clean typography
+Smooth animations
+Mobile-first design
+Easy navigation for beginners
+
+Design inspiration from modern educational apps.
+
+---
+
+SECURITY REQUIREMENTS
+
+Prevent malicious code execution
+Sandbox code runner environment
+Rate limiting for API
+Secure authentication
+Data encryption
+
+---
+
+SCALABILITY
+
+System should be designed to support:
+
+Thousands of concurrent users
+Course expansion
+Future AI assistant integration
+Community discussion features
+
+---
+
+FUTURE FEATURES
+
+AI coding assistant
+Community forums
+Peer code reviews
+Live coding labs
+Interview preparation modules
+
+---
+
+DELIVERABLES
+
+Provide:
+
+Full system architecture
+Mobile app structure
+Backend API design
+Database schema
+Example lesson content
+Example coding challenge
+Basic UI layout
+Starter code structure
+
+The code should be modular, maintainable, and ready for future scaling.
