@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams, router } from "expo-router";
 import Colors from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
-import { LESSON_DATA, LessonSection } from "@/data/lessonData";
+import { LessonSection } from "@/data/lessonData";
 
 const SECTIONS: LessonSection[] = ["Beginner", "Intermediate", "Advanced"];
 
@@ -28,10 +28,10 @@ export default function LessonListScreen() {
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
   const { courseId } = useLocalSearchParams<{ courseId: string }>();
-  const { courses, profile } = useApp();
+  const { courses, profile, ALL_LESSONS } = useApp();
 
   const course = courses.find((c) => c.id === courseId);
-  const lessons = LESSON_DATA[courseId] || [];
+  const lessons = ALL_LESSONS[courseId] || [];
 
   if (!course) {
     return (
@@ -56,14 +56,10 @@ export default function LessonListScreen() {
           <View style={[styles.langDot, { backgroundColor: course.color }]} />
           <Text style={[styles.courseTitle, { color: colors.text }]}>{course.title}</Text>
         </View>
-        <Text style={[styles.courseDesc, { color: colors.textSecondary }]}>
-          {course.description}
-        </Text>
+        <Text style={[styles.courseDesc, { color: colors.textMuted }]}>{course.description}</Text>
         <View style={styles.progressRow}>
           <View style={[styles.progressTrack, { backgroundColor: colors.backgroundTertiary }]}>
-            <View
-              style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: course.color }]}
-            />
+            <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: course.color }]} />
           </View>
           <Text style={[styles.progressCount, { color: colors.textMuted }]}>
             {totalCompleted}/{lessons.length}
@@ -97,47 +93,34 @@ export default function LessonListScreen() {
                 <Pressable
                   key={lesson.id}
                   onPress={() =>
-                    router.push({
-                      pathname: "/lesson/view/[courseId]/[lessonId]",
-                      params: { courseId, lessonId: lesson.id },
-                    })
+                    router.push({ pathname: "/lesson/view/[courseId]/[lessonId]", params: { courseId, lessonId: lesson.id } })
                   }
                   style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
                 >
-                  <View style={[styles.lessonRow, { paddingLeft: 20 }]}>
-                    <View
-                      style={[
-                        styles.lessonIcon,
-                        {
-                          backgroundColor: isCompleted ? DIFF_COLORS[section] + "22" : colors.backgroundSecondary,
-                          borderColor: isCompleted ? DIFF_COLORS[section] : colors.cardBorder,
-                        },
-                      ]}
-                    >
-                      {isCompleted ? (
-                        <Feather name="check" size={12} color={DIFF_COLORS[section]} />
-                      ) : (
-                        <Text style={[styles.lessonNumText, { color: colors.textMuted }]}>
-                          {index + 1}
-                        </Text>
-                      )}
+                  <View style={styles.lessonRow}>
+                    <View style={[styles.lessonIcon, {
+                      backgroundColor: isCompleted ? DIFF_COLORS[section] + "22" : colors.backgroundSecondary,
+                      borderColor: isCompleted ? DIFF_COLORS[section] : colors.cardBorder,
+                    }]}>
+                      {isCompleted
+                        ? <Feather name="check" size={12} color={DIFF_COLORS[section]} />
+                        : <Text style={[styles.lessonNumText, { color: colors.textMuted }]}>{index + 1}</Text>
+                      }
                     </View>
                     <View style={styles.lessonInfo}>
-                      <Text style={[styles.lessonTitle, { color: isCompleted ? colors.textSecondary : colors.text }]}>
+                      <Text style={[styles.lessonTitle, { color: isCompleted ? colors.textMuted : colors.text }]}>
                         {lesson.title}
                       </Text>
                       {lesson.quiz && (
                         <View style={styles.quizTag}>
                           <Feather name="help-circle" size={10} color={colors.textMuted} />
-                          <Text style={[styles.quizTagText, { color: colors.textMuted }]}>Quiz</Text>
+                          <Text style={[styles.quizTagText, { color: colors.textMuted }]}>Quiz included</Text>
                         </View>
                       )}
                     </View>
                     <Feather name="chevron-right" size={15} color={colors.textMuted} />
                   </View>
-                  {!isLast && (
-                    <View style={[styles.rowDivider, { backgroundColor: colors.separator, marginLeft: 64 }]} />
-                  )}
+                  {!isLast && <View style={[styles.rowDivider, { backgroundColor: colors.separator, marginLeft: 64 }]} />}
                 </Pressable>
               );
             })}
@@ -164,32 +147,13 @@ const styles = StyleSheet.create({
   progressCount: { fontSize: 12, fontFamily: "Inter_500Medium" },
   divider: { height: 1, marginHorizontal: 20, marginBottom: 16 },
   sectionBlock: { marginBottom: 4 },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    marginBottom: 8,
-  },
+  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, marginBottom: 8 },
   sectionLabelRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   sectionDot: { width: 8, height: 8, borderRadius: 4 },
   sectionTitle: { fontSize: 13, fontFamily: "Inter_700Bold", letterSpacing: 0.4 },
   sectionCount: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  lessonRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingRight: 20,
-    paddingVertical: 12,
-  },
-  lessonIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  lessonRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingLeft: 20, paddingRight: 20, paddingVertical: 12 },
+  lessonIcon: { width: 28, height: 28, borderRadius: 14, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   lessonNumText: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
   lessonInfo: { flex: 1, gap: 2 },
   lessonTitle: { fontSize: 14, fontFamily: "Inter_500Medium" },

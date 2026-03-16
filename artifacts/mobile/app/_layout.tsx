@@ -6,57 +6,45 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { Stack, Redirect } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { View, ActivityIndicator, useColorScheme } from "react-native";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider } from "@/context/AppContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
+import Colors from "@/constants/colors";
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
-function RootLayoutNav() {
+function AuthGate() {
+  const { user, loading } = useAuth();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === "dark";
+  const colors = isDark ? Colors.dark : Colors.light;
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.text} />
+      </View>
+    );
+  }
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="auth" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="lesson/[courseId]"
-        options={{
-          headerShown: true,
-          headerTransparent: false,
-          title: "Course",
-          headerBackTitle: "Back",
-        }}
-      />
-      <Stack.Screen
-        name="lesson/view/[courseId]/[lessonId]"
-        options={{
-          headerShown: true,
-          title: "Lesson",
-          headerBackTitle: "Course",
-        }}
-      />
-      <Stack.Screen
-        name="challenge/[id]"
-        options={{
-          headerShown: true,
-          title: "Challenge",
-          headerBackTitle: "Back",
-        }}
-      />
-      <Stack.Screen
-        name="career/[id]"
-        options={{
-          headerShown: true,
-          title: "Career Path",
-          headerBackTitle: "Back",
-        }}
-      />
+      <Stack.Screen name="lesson/[courseId]" options={{ headerShown: true, title: "Course", headerBackTitle: "Back" }} />
+      <Stack.Screen name="lesson/view/[courseId]/[lessonId]" options={{ headerShown: true, title: "Lesson", headerBackTitle: "Course" }} />
+      <Stack.Screen name="challenge/[id]" options={{ headerShown: true, title: "Challenge", headerBackTitle: "Back" }} />
+      <Stack.Screen name="career/[id]" options={{ headerShown: true, title: "Career Path", headerBackTitle: "Back" }} />
     </Stack>
   );
 }
@@ -70,9 +58,7 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
+    if (fontsLoaded || fontError) SplashScreen.hideAsync();
   }, [fontsLoaded, fontError]);
 
   if (!fontsLoaded && !fontError) return null;
@@ -81,13 +67,15 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
-          <AppProvider>
-            <GestureHandlerRootView>
-              <KeyboardProvider>
-                <RootLayoutNav />
-              </KeyboardProvider>
-            </GestureHandlerRootView>
-          </AppProvider>
+          <AuthProvider>
+            <AppProvider>
+              <GestureHandlerRootView>
+                <KeyboardProvider>
+                  <AuthGate />
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </AppProvider>
+          </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
