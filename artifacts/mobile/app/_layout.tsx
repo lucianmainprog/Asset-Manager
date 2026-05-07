@@ -6,7 +6,7 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack, Redirect } from "expo-router";
+import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -17,6 +17,7 @@ import { View, ActivityIndicator, useColorScheme } from "react-native";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider } from "@/context/AppContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { SubscriptionProvider } from "@/context/SubscriptionContext";
 import Colors from "@/constants/colors";
 
 SplashScreen.preventAutoHideAsync();
@@ -39,12 +40,28 @@ function AuthGate() {
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="auth" options={{ headerShown: false }} />
+      <Stack.Screen name="auth" options={{ headerShown: false, animation: "fade" }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="lesson/[courseId]" options={{ headerShown: true, title: "Course", headerBackTitle: "Back" }} />
-      <Stack.Screen name="lesson/view/[courseId]/[lessonId]" options={{ headerShown: true, title: "Lesson", headerBackTitle: "Course" }} />
-      <Stack.Screen name="challenge/[id]" options={{ headerShown: true, title: "Challenge", headerBackTitle: "Back" }} />
-      <Stack.Screen name="career/[id]" options={{ headerShown: true, title: "Career Path", headerBackTitle: "Back" }} />
+      <Stack.Screen
+        name="lesson/[courseId]"
+        options={{ headerShown: true, title: "Course", headerBackTitle: "Back" }}
+      />
+      <Stack.Screen
+        name="lesson/view/[courseId]/[lessonId]"
+        options={{ headerShown: true, title: "Lesson", headerBackTitle: "Course" }}
+      />
+      <Stack.Screen
+        name="challenge/[id]"
+        options={{ headerShown: true, title: "Challenge", headerBackTitle: "Back" }}
+      />
+      <Stack.Screen
+        name="career/[id]"
+        options={{ headerShown: true, title: "Career Path", headerBackTitle: "Back" }}
+      />
+      <Stack.Screen
+        name="premium"
+        options={{ headerShown: false, presentation: "modal" }}
+      />
     </Stack>
   );
 }
@@ -68,13 +85,15 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <AppProvider>
-              <GestureHandlerRootView>
-                <KeyboardProvider>
-                  <AuthGate />
-                </KeyboardProvider>
-              </GestureHandlerRootView>
-            </AppProvider>
+            <SubscriptionProvider>
+              <AppProvider>
+                <GestureHandlerRootView>
+                  <KeyboardProvider>
+                    <AuthGate />
+                  </KeyboardProvider>
+                </GestureHandlerRootView>
+              </AppProvider>
+            </SubscriptionProvider>
           </AuthProvider>
         </QueryClientProvider>
       </ErrorBoundary>

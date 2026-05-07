@@ -13,9 +13,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Colors from "@/constants/colors";
 import { useApp } from "@/context/AppContext";
-import { ChallengeCard } from "@/components/ChallengeCard";
 
 const FILTERS = ["All", "Beginner", "Intermediate", "Advanced"];
+
+const DIFF_COLORS = {
+  Beginner: "#16A34A",
+  Intermediate: "#D97706",
+  Advanced: "#DC2626",
+};
 
 export default function ChallengesScreen() {
   const colorScheme = useColorScheme();
@@ -25,15 +30,15 @@ export default function ChallengesScreen() {
   const { challenges, profile } = useApp();
   const [activeFilter, setActiveFilter] = useState("All");
 
-  const topPadding = Platform.OS === "web" ? 67 : insets.top + 10;
-  const bottomPadding = Platform.OS === "web" ? 34 + 84 : insets.bottom + 80;
+  const topPadding = Platform.OS === "web" ? 67 : insets.top + 16;
+  const bottomPadding = Platform.OS === "web" ? 34 + 84 : insets.bottom + 90;
 
   const filtered = activeFilter === "All"
     ? challenges
     : challenges.filter((c) => c.difficulty === activeFilter);
 
   const completedCount = challenges.filter((c) => c.completed).length;
-  const totalXP = challenges.filter((c) => c.completed).reduce((sum, c) => sum + c.xpReward, 0);
+  const totalXP = challenges.filter((c) => c.completed).reduce((s, c) => s + c.xpReward, 0);
 
   return (
     <ScrollView
@@ -43,35 +48,37 @@ export default function ChallengesScreen() {
       contentInsetAdjustmentBehavior="automatic"
     >
       <View style={styles.header}>
-        <Text style={[styles.screenTitle, { color: colors.text }]}>Challenges</Text>
-        <Text style={[styles.screenSub, { color: colors.textSecondary }]}>
-          Sharpen your coding skills
+        <Text style={[styles.screenTitle, { color: colors.text }]}>Practice</Text>
+        <Text style={[styles.screenSub, { color: colors.textMuted }]}>
+          {completedCount}/{challenges.length} solved
         </Text>
       </View>
 
+      <View style={[styles.divider, { backgroundColor: colors.separator }]} />
+
+      {/* Stats */}
       <View style={styles.statsRow}>
-        <View style={[styles.statCard, { backgroundColor: isDark ? "#0D1B2E" : "#EFF6FF", borderColor: isDark ? "#1E3A5F" : "#BFDBFE" }]}>
-          <Feather name="check-circle" size={18} color={colors.accent} />
-          <Text style={[styles.statNum, { color: colors.text }]}>{completedCount}/{challenges.length}</Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Solved</Text>
-        </View>
-        <View style={[styles.statCard, { backgroundColor: isDark ? "#0D1B2E" : "#FFF7ED", borderColor: isDark ? "#1E3A5F" : "#FED7AA" }]}>
-          <Feather name="zap" size={18} color="#FF6B35" />
-          <Text style={[styles.statNum, { color: colors.text }]}>{totalXP}</Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>XP earned</Text>
-        </View>
-        <View style={[styles.statCard, { backgroundColor: isDark ? "#0D1B2E" : "#F0FDF4", borderColor: isDark ? "#1E3A5F" : "#BBF7D0" }]}>
-          <Feather name="trending-up" size={18} color="#10B981" />
-          <Text style={[styles.statNum, { color: colors.text }]}>{profile.level}</Text>
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Level</Text>
-        </View>
+        {[
+          { icon: "check-circle", value: `${completedCount}/${challenges.length}`, label: "Solved", color: colors.accentGreen },
+          { icon: "award", value: `${totalXP}`, label: "XP earned", color: "#CA8A04" },
+          { icon: "trending-up", value: `${profile.level}`, label: "Level", color: colors.text },
+        ].map((s) => (
+          <View key={s.label} style={[styles.statCard, { borderColor: colors.cardBorder, backgroundColor: colors.backgroundSecondary }]}>
+            <Feather name={s.icon as any} size={16} color={s.color} />
+            <Text style={[styles.statNum, { color: colors.text }]}>{s.value}</Text>
+            <Text style={[styles.statLabel, { color: colors.textMuted }]}>{s.label}</Text>
+          </View>
+        ))}
       </View>
 
+      <View style={[styles.divider, { backgroundColor: colors.separator }]} />
+
+      {/* Filters */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.filtersContainer}
         contentContainerStyle={styles.filters}
+        style={styles.filtersScroll}
       >
         {FILTERS.map((f) => (
           <Pressable
@@ -80,40 +87,57 @@ export default function ChallengesScreen() {
             style={[
               styles.filterBtn,
               {
-                backgroundColor: activeFilter === f ? colors.accent : colors.card,
-                borderColor: activeFilter === f ? colors.accent : colors.cardBorder,
+                backgroundColor: activeFilter === f ? colors.text : "transparent",
+                borderColor: activeFilter === f ? colors.text : colors.cardBorder,
               },
             ]}
           >
-            <Text
-              style={[
-                styles.filterText,
-                { color: activeFilter === f ? "#FFFFFF" : colors.textSecondary },
-              ]}
-            >
+            <Text style={[styles.filterText, { color: activeFilter === f ? colors.background : colors.textSecondary }]}>
               {f}
             </Text>
           </Pressable>
         ))}
       </ScrollView>
 
-      <View style={styles.challengesList}>
+      {/* Challenge List */}
+      <View style={styles.list}>
         {filtered.length === 0 ? (
           <View style={styles.emptyState}>
-            <Feather name="code" size={40} color={colors.textMuted} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>No challenges yet</Text>
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              More coming soon!
-            </Text>
+            <Feather name="code" size={32} color={colors.textMuted} />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>No challenges</Text>
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>Try a different filter</Text>
           </View>
         ) : (
-          filtered.map((challenge) => (
-            <ChallengeCard
-              key={challenge.id}
-              challenge={challenge}
-              onPress={() => router.push(`/challenge/${challenge.id}`)}
-            />
-          ))
+          filtered.map((ch, i, arr) => {
+            const isLast = i === arr.length - 1;
+            const diffColor = DIFF_COLORS[ch.difficulty];
+            return (
+              <Pressable
+                key={ch.id}
+                onPress={() => router.push(`/challenge/${ch.id}`)}
+                style={({ pressed }) => [{ opacity: pressed ? 0.6 : 1 }]}
+              >
+                <View style={styles.challengeRow}>
+                  <View style={[styles.challengeIcon, { backgroundColor: colors.backgroundSecondary, borderColor: colors.cardBorder }]}>
+                    {ch.completed
+                      ? <Feather name="check" size={14} color={colors.accentGreen} />
+                      : <Feather name="code" size={14} color={colors.textMuted} />
+                    }
+                  </View>
+                  <View style={styles.challengeInfo}>
+                    <Text style={[styles.challengeTitle, { color: ch.completed ? colors.textMuted : colors.text }]}>{ch.title}</Text>
+                    <View style={styles.challengeMeta}>
+                      <Text style={[styles.challengeDiff, { color: diffColor }]}>{ch.difficulty}</Text>
+                      <Text style={[styles.challengeLang, { color: colors.textMuted }]}>{ch.language}</Text>
+                      <Text style={[styles.challengeXP, { color: colors.textMuted }]}>+{ch.xpReward} XP</Text>
+                    </View>
+                  </View>
+                  <Feather name="chevron-right" size={15} color={colors.textMuted} />
+                </View>
+                {!isLast && <View style={[styles.rowDivider, { backgroundColor: colors.separator, marginLeft: 56 }]} />}
+              </Pressable>
+            );
+          })
         )}
       </View>
     </ScrollView>
@@ -121,75 +145,30 @@ export default function ChallengesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
-    gap: 4,
-  },
-  screenTitle: {
-    fontSize: 32,
-    fontFamily: "Inter_700Bold",
-  },
-  screenSub: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-  },
-  statsRow: {
-    flexDirection: "row",
-    paddingHorizontal: 20,
-    gap: 10,
-    marginBottom: 16,
-  },
-  statCard: {
-    flex: 1,
-    borderRadius: 12,
-    padding: 12,
-    alignItems: "center",
-    gap: 4,
-    borderWidth: 1,
-  },
-  statNum: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
-  },
-  statLabel: {
-    fontSize: 10,
-    fontFamily: "Inter_500Medium",
-  },
-  filtersContainer: {
-    marginBottom: 16,
-  },
-  filters: {
-    paddingHorizontal: 20,
-    gap: 8,
-  },
-  filterBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  filterText: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-  },
-  challengesList: {
-    paddingHorizontal: 20,
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingTop: 40,
-    gap: 12,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontFamily: "Inter_700Bold",
-  },
-  emptyText: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-  },
+  container: { flex: 1 },
+  header: { paddingHorizontal: 20, marginBottom: 16 },
+  screenTitle: { fontSize: 28, fontFamily: "Inter_700Bold" },
+  screenSub: { fontSize: 13, fontFamily: "Inter_400Regular", marginTop: 2 },
+  divider: { height: 1, marginHorizontal: 20, marginBottom: 16 },
+  statsRow: { flexDirection: "row", paddingHorizontal: 20, gap: 8, marginBottom: 16 },
+  statCard: { flex: 1, borderRadius: 10, borderWidth: 1, padding: 12, alignItems: "center", gap: 4 },
+  statNum: { fontSize: 16, fontFamily: "Inter_700Bold" },
+  statLabel: { fontSize: 10, fontFamily: "Inter_500Medium" },
+  filtersScroll: { marginBottom: 8 },
+  filters: { paddingHorizontal: 20, gap: 8 },
+  filterBtn: { paddingHorizontal: 16, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
+  filterText: { fontSize: 13, fontFamily: "Inter_600SemiBold" },
+  list: { paddingHorizontal: 20, marginTop: 8 },
+  emptyState: { alignItems: "center", paddingTop: 48, gap: 10 },
+  emptyTitle: { fontSize: 16, fontFamily: "Inter_700Bold" },
+  emptyText: { fontSize: 13, fontFamily: "Inter_400Regular" },
+  challengeRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 13 },
+  challengeIcon: { width: 32, height: 32, borderRadius: 16, borderWidth: 1, alignItems: "center", justifyContent: "center" },
+  challengeInfo: { flex: 1 },
+  challengeTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold", marginBottom: 4 },
+  challengeMeta: { flexDirection: "row", alignItems: "center", gap: 10 },
+  challengeDiff: { fontSize: 11, fontFamily: "Inter_600SemiBold" },
+  challengeLang: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  challengeXP: { fontSize: 11, fontFamily: "Inter_500Medium" },
+  rowDivider: { height: 1 },
 });

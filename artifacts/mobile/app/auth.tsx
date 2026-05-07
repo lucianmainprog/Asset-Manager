@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -10,13 +10,12 @@ import {
   Platform,
   useColorScheme,
   ActivityIndicator,
-  Animated,
-  Dimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as WebBrowser from "expo-web-browser";
 import * as AuthSession from "expo-auth-session";
+import { Redirect } from "expo-router";
 import Colors from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 
@@ -29,7 +28,7 @@ export default function AuthScreen() {
   const isDark = colorScheme === "dark";
   const colors = isDark ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
-  const { login, register, loginWithGoogle, error, clearError } = useAuth();
+  const { user, loading: authLoading, login, register, loginWithGoogle, error, clearError } = useAuth();
 
   const [tab, setTab] = useState<Tab>("signin");
   const [name, setName] = useState("");
@@ -39,21 +38,16 @@ export default function AuthScreen() {
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const slideAnim = useRef(new Animated.Value(0)).current;
-  const screenWidth = Dimensions.get("window").width;
+
+  // If already authenticated, go to app
+  if (!authLoading && user) {
+    return <Redirect href="/(tabs)" />;
+  }
 
   const switchTab = (t: Tab) => {
     clearError();
-    Animated.timing(slideAnim, {
-      toValue: t === "signin" ? 0 : 1,
-      duration: 200,
-      useNativeDriver: false,
-    }).start();
     setTab(t);
-    setName("");
-    setEmail("");
-    setPassword("");
-    setConfirmPass("");
+    setName(""); setEmail(""); setPassword(""); setConfirmPass("");
   };
 
   const handleSubmit = async () => {
@@ -75,61 +69,32 @@ export default function AuthScreen() {
     setGoogleLoading(true);
     clearError();
     try {
-      const redirectUri = AuthSession.makeRedirectUri({
-        scheme: "techjourney",
-      });
-      const discoveryUrl = "https://accounts.google.com";
-      const discovery = await AuthSession.fetchDiscoveryAsync(discoveryUrl);
-
+      const redirectUri = AuthSession.makeRedirectUri({ scheme: "techjourney" });
+      const discovery = await AuthSession.fetchDiscoveryAsync("https://accounts.google.com");
       const request = new AuthSession.AuthRequest({
         clientId: "YOUR_GOOGLE_CLIENT_ID",
         scopes: ["openid", "profile", "email"],
         redirectUri,
         responseType: AuthSession.ResponseType.Token,
       });
-
-      const result = await request.promptAsync(discovery, {
-        showInRecents: true,
-      });
-
+      const result = await request.promptAsync(discovery, { showInRecents: true });
       if (result.type === "success" && result.authentication?.accessToken) {
-        const res = await fetch(
-          "https://www.googleapis.com/oauth2/v3/userinfo",
-          {
-            headers: {
-              Authorization: `Bearer ${result.authentication.accessToken}`,
-            },
-          },
-        );
+        const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${result.authentication.accessToken}` },
+        });
         const googleUser = await res.json();
-        await loginWithGoogle({
-          name: googleUser.name,
-          email: googleUser.email,
-          avatar: googleUser.picture,
-        });
-      } else if (result.type === "error") {
-        throw new Error("Google sign-in was cancelled or failed.");
+        await loginWithGoogle({ name: googleUser.name, email: googleUser.email, avatar: googleUser.picture });
       }
-    } catch (e: any) {
-      if (e?.message?.includes("YOUR_GOOGLE_CLIENT_ID")) {
-        await loginWithGoogle({
-          name: "Demo User",
-          email: `demo_${Date.now()}@gmail.com`,
-          avatar: undefined,
-        });
-      }
+    } catch {
+      // Fallback to demo user when Google client ID isn't configured
+      await loginWithGoogle({ name: "Demo User", email: `demo_${Date.now()}@gmail.com` });
     } finally {
       setGoogleLoading(false);
     }
   };
 
-  const tabIndicatorLeft = slideAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [4, screenWidth / 2 + 4],
-  });
-
-  const passwordsMatch =
-    tab === "signup" && confirmPass.length > 0 && password !== confirmPass;
+  const passwordsMatch = tab === "signup" && confirmPass.length > 0 && password !== confirmPass;
+  const canSubmit = !loading && !passwordsMatch && email.trim().length > 0 && password.trim().length > 0;
 
   return (
     <KeyboardAvoidingView
@@ -137,98 +102,37 @@ export default function AuthScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
-        contentContainerStyle={[
-          styles.scroll,
-          { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 },
-        ]}
+        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* Logo */}
         <View style={styles.logoSection}>
-          <View
-            style={[
-              styles.logoBox,
-              {
-                backgroundColor: colors.backgroundSecondary,
-                borderColor: colors.cardBorder,
-              },
-            ]}
-          >
+          <View style={[styles.logoBox, { backgroundColor: colors.backgroundSecondary, borderColor: colors.cardBorder }]}>
             <Feather name="code" size={32} color={colors.text} />
           </View>
-          <Text style={[styles.appName, { color: colors.text }]}>
-            TechJourney
-          </Text>
-          <Text style={[styles.tagline, { color: colors.textMuted }]}>
-            Learn IT. Build Careers.
-          </Text>
+          <Text style={[styles.appName, { color: colors.text }]}>TechJourney</Text>
+          <Text style={[styles.tagline, { color: colors.textMuted }]}>Learn IT. Build Careers.</Text>
         </View>
 
-        <View
-          style={[
-            styles.card,
-            { backgroundColor: colors.card, borderColor: colors.cardBorder },
-          ]}
-        >
-          <View
-            style={[
-              styles.tabBar,
-              { backgroundColor: colors.backgroundSecondary },
-            ]}
-          >
-            <Animated.View
-              style={[
-                styles.tabIndicator,
-                {
-                  left: tabIndicatorLeft,
-                  backgroundColor: colors.background,
-                  borderColor: colors.cardBorder,
-                },
-              ]}
-            />
-            <Pressable
-              style={styles.tabBtn}
-              onPress={() => switchTab("signin")}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  { color: tab === "signin" ? colors.text : colors.textMuted },
-                ]}
-              >
-                Sign In
-              </Text>
+        {/* Card */}
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+          {/* Tabs */}
+          <View style={[styles.tabBar, { backgroundColor: colors.backgroundSecondary }]}>
+            <View style={[styles.tabIndicator, { left: tab === "signin" ? 4 : "50%", backgroundColor: colors.background, borderColor: colors.cardBorder }]} />
+            <Pressable style={styles.tabBtn} onPress={() => switchTab("signin")}>
+              <Text style={[styles.tabText, { color: tab === "signin" ? colors.text : colors.textMuted }]}>Sign In</Text>
             </Pressable>
-            <Pressable
-              style={styles.tabBtn}
-              onPress={() => switchTab("signup")}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  { color: tab === "signup" ? colors.text : colors.textMuted },
-                ]}
-              >
-                Sign Up
-              </Text>
+            <Pressable style={styles.tabBtn} onPress={() => switchTab("signup")}>
+              <Text style={[styles.tabText, { color: tab === "signup" ? colors.text : colors.textMuted }]}>Sign Up</Text>
             </Pressable>
           </View>
 
           <View style={styles.form}>
             {tab === "signup" && (
               <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.textMuted }]}>
-                  Full Name
-                </Text>
-                <View
-                  style={[
-                    styles.inputWrap,
-                    {
-                      borderColor: colors.cardBorder,
-                      backgroundColor: colors.backgroundSecondary,
-                    },
-                  ]}
-                >
+                <Text style={[styles.inputLabel, { color: colors.textMuted }]}>Full Name</Text>
+                <View style={[styles.inputWrap, { borderColor: colors.cardBorder, backgroundColor: colors.backgroundSecondary }]}>
                   <Feather name="user" size={16} color={colors.textMuted} />
                   <TextInput
                     style={[styles.input, { color: colors.text }]}
@@ -244,18 +148,8 @@ export default function AuthScreen() {
             )}
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.textMuted }]}>
-                Email
-              </Text>
-              <View
-                style={[
-                  styles.inputWrap,
-                  {
-                    borderColor: colors.cardBorder,
-                    backgroundColor: colors.backgroundSecondary,
-                  },
-                ]}
-              >
+              <Text style={[styles.inputLabel, { color: colors.textMuted }]}>Email</Text>
+              <View style={[styles.inputWrap, { borderColor: colors.cardBorder, backgroundColor: colors.backgroundSecondary }]}>
                 <Feather name="mail" size={16} color={colors.textMuted} />
                 <TextInput
                   style={[styles.input, { color: colors.text }]}
@@ -272,26 +166,14 @@ export default function AuthScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.textMuted }]}>
-                Password
-              </Text>
-              <View
-                style={[
-                  styles.inputWrap,
-                  {
-                    borderColor: colors.cardBorder,
-                    backgroundColor: colors.backgroundSecondary,
-                  },
-                ]}
-              >
+              <Text style={[styles.inputLabel, { color: colors.textMuted }]}>Password</Text>
+              <View style={[styles.inputWrap, { borderColor: colors.cardBorder, backgroundColor: colors.backgroundSecondary }]}>
                 <Feather name="lock" size={16} color={colors.textMuted} />
                 <TextInput
                   style={[styles.input, { color: colors.text }]}
                   value={password}
                   onChangeText={setPassword}
-                  placeholder={
-                    tab === "signup" ? "At least 6 characters" : "Your password"
-                  }
+                  placeholder={tab === "signup" ? "At least 6 characters" : "Your password"}
                   placeholderTextColor={colors.textMuted}
                   secureTextEntry={!showPass}
                   autoCapitalize="none"
@@ -299,36 +181,16 @@ export default function AuthScreen() {
                   onSubmitEditing={tab === "signin" ? handleSubmit : undefined}
                 />
                 <Pressable onPress={() => setShowPass(!showPass)}>
-                  <Feather
-                    name={showPass ? "eye-off" : "eye"}
-                    size={16}
-                    color={colors.textMuted}
-                  />
+                  <Feather name={showPass ? "eye-off" : "eye"} size={16} color={colors.textMuted} />
                 </Pressable>
               </View>
             </View>
 
             {tab === "signup" && (
               <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.textMuted }]}>
-                  Confirm Password
-                </Text>
-                <View
-                  style={[
-                    styles.inputWrap,
-                    {
-                      borderColor: passwordsMatch
-                        ? "#DC2626"
-                        : colors.cardBorder,
-                      backgroundColor: colors.backgroundSecondary,
-                    },
-                  ]}
-                >
-                  <Feather
-                    name="lock"
-                    size={16}
-                    color={passwordsMatch ? "#DC2626" : colors.textMuted}
-                  />
+                <Text style={[styles.inputLabel, { color: colors.textMuted }]}>Confirm Password</Text>
+                <View style={[styles.inputWrap, { borderColor: passwordsMatch ? "#DC2626" : colors.cardBorder, backgroundColor: colors.backgroundSecondary }]}>
+                  <Feather name="lock" size={16} color={passwordsMatch ? "#DC2626" : colors.textMuted} />
                   <TextInput
                     style={[styles.input, { color: colors.text }]}
                     value={confirmPass}
@@ -341,70 +203,41 @@ export default function AuthScreen() {
                     onSubmitEditing={handleSubmit}
                   />
                 </View>
-                {passwordsMatch && (
-                  <Text style={styles.fieldError}>Passwords do not match</Text>
-                )}
+                {passwordsMatch && <Text style={styles.fieldError}>Passwords do not match</Text>}
               </View>
             )}
 
-            {error && (
+            {error ? (
               <View style={styles.errorBox}>
                 <Feather name="alert-circle" size={14} color="#DC2626" />
                 <Text style={styles.errorText}>{error}</Text>
               </View>
-            )}
+            ) : null}
 
             <Pressable
               onPress={handleSubmit}
-              disabled={loading || passwordsMatch}
-              style={({ pressed }) => [
-                styles.primaryBtn,
-                {
-                  backgroundColor: colors.text,
-                  opacity: loading || passwordsMatch ? 0.5 : pressed ? 0.8 : 1,
-                },
-              ]}
+              disabled={!canSubmit}
+              style={({ pressed }) => [styles.primaryBtn, { backgroundColor: colors.text, opacity: !canSubmit ? 0.5 : pressed ? 0.8 : 1 }]}
             >
               {loading ? (
                 <ActivityIndicator color={colors.background} size="small" />
               ) : (
-                <Text
-                  style={[styles.primaryBtnText, { color: colors.background }]}
-                >
+                <Text style={[styles.primaryBtnText, { color: colors.background }]}>
                   {tab === "signin" ? "Sign In" : "Create Account"}
                 </Text>
               )}
             </Pressable>
 
             <View style={styles.dividerRow}>
-              <View
-                style={[
-                  styles.dividerLine,
-                  { backgroundColor: colors.separator },
-                ]}
-              />
-              <Text style={[styles.dividerText, { color: colors.textMuted }]}>
-                or continue with
-              </Text>
-              <View
-                style={[
-                  styles.dividerLine,
-                  { backgroundColor: colors.separator },
-                ]}
-              />
+              <View style={[styles.dividerLine, { backgroundColor: colors.separator }]} />
+              <Text style={[styles.dividerText, { color: colors.textMuted }]}>or continue with</Text>
+              <View style={[styles.dividerLine, { backgroundColor: colors.separator }]} />
             </View>
 
             <Pressable
               onPress={handleGoogle}
               disabled={googleLoading}
-              style={({ pressed }) => [
-                styles.googleBtn,
-                {
-                  borderColor: colors.cardBorder,
-                  backgroundColor: colors.backgroundSecondary,
-                  opacity: googleLoading ? 0.6 : pressed ? 0.7 : 1,
-                },
-              ]}
+              style={({ pressed }) => [styles.googleBtn, { borderColor: colors.cardBorder, backgroundColor: colors.backgroundSecondary, opacity: googleLoading ? 0.6 : pressed ? 0.7 : 1 }]}
             >
               {googleLoading ? (
                 <ActivityIndicator size="small" color={colors.text} />
@@ -413,9 +246,7 @@ export default function AuthScreen() {
                   <View style={styles.googleLogo}>
                     <Text style={styles.googleG}>G</Text>
                   </View>
-                  <Text style={[styles.googleBtnText, { color: colors.text }]}>
-                    Continue with Google
-                  </Text>
+                  <Text style={[styles.googleBtnText, { color: colors.text }]}>Continue with Google</Text>
                 </>
               )}
             </Pressable>
@@ -434,103 +265,30 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scroll: { paddingHorizontal: 24, gap: 24 },
   logoSection: { alignItems: "center", gap: 10 },
-  logoBox: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  logoBox: { width: 72, height: 72, borderRadius: 20, borderWidth: 1, alignItems: "center", justifyContent: "center" },
   appName: { fontSize: 28, fontFamily: "Inter_700Bold" },
   tagline: { fontSize: 14, fontFamily: "Inter_400Regular" },
-  card: {
-    borderRadius: 20,
-    borderWidth: 1,
-    overflow: "hidden",
-  },
-  tabBar: {
-    flexDirection: "row",
-    padding: 4,
-    position: "relative",
-    height: 44,
-  },
-  tabIndicator: {
-    position: "absolute",
-    top: 4,
-    width: "50%",
-    height: 36,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  tabBtn: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    zIndex: 1,
-  },
+  card: { borderRadius: 20, borderWidth: 1, overflow: "hidden" },
+  tabBar: { flexDirection: "row", padding: 4, position: "relative", height: 44 },
+  tabIndicator: { position: "absolute", top: 4, width: "50%", height: 36, borderRadius: 10, borderWidth: 1 },
+  tabBtn: { flex: 1, alignItems: "center", justifyContent: "center", zIndex: 1 },
   tabText: { fontSize: 14, fontFamily: "Inter_600SemiBold" },
   form: { padding: 20, gap: 14 },
   inputGroup: { gap: 6 },
   inputLabel: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  inputWrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    height: 48,
-  },
+  inputWrap: { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, height: 48 },
   input: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular" },
   fieldError: { fontSize: 11, color: "#DC2626", fontFamily: "Inter_500Medium" },
-  errorBox: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    padding: 12,
-    backgroundColor: "#DC262611",
-    borderRadius: 8,
-  },
-  errorText: {
-    color: "#DC2626",
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    flex: 1,
-  },
-  primaryBtn: {
-    height: 50,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 4,
-  },
+  errorBox: { flexDirection: "row", alignItems: "center", gap: 8, padding: 12, backgroundColor: "#DC262611", borderRadius: 8 },
+  errorText: { color: "#DC2626", fontSize: 13, fontFamily: "Inter_500Medium", flex: 1 },
+  primaryBtn: { height: 50, borderRadius: 12, alignItems: "center", justifyContent: "center", marginTop: 4 },
   primaryBtnText: { fontSize: 16, fontFamily: "Inter_700Bold" },
   dividerRow: { flexDirection: "row", alignItems: "center", gap: 12 },
   dividerLine: { flex: 1, height: 1 },
   dividerText: { fontSize: 12, fontFamily: "Inter_500Medium" },
-  googleBtn: {
-    height: 50,
-    borderRadius: 12,
-    borderWidth: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  googleLogo: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "#4285F4",
-    alignItems: "center",
-    justifyContent: "center",
-  },
+  googleBtn: { height: 50, borderRadius: 12, borderWidth: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 12 },
+  googleLogo: { width: 22, height: 22, borderRadius: 11, backgroundColor: "#4285F4", alignItems: "center", justifyContent: "center" },
   googleG: { color: "#fff", fontSize: 13, fontFamily: "Inter_700Bold" },
   googleBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  footerText: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    textAlign: "center",
-  },
+  footerText: { fontSize: 11, fontFamily: "Inter_400Regular", textAlign: "center" },
 });
