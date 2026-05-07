@@ -11,6 +11,7 @@ import {
   useColorScheme,
   ActivityIndicator,
   Animated,
+  Dimensions,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -39,6 +40,7 @@ export default function AuthScreen() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const slideAnim = useRef(new Animated.Value(0)).current;
+  const screenWidth = Dimensions.get("window").width;
 
   const switchTab = (t: Tab) => {
     clearError();
@@ -48,7 +50,10 @@ export default function AuthScreen() {
       useNativeDriver: false,
     }).start();
     setTab(t);
-    setName(""); setEmail(""); setPassword(""); setConfirmPass("");
+    setName("");
+    setEmail("");
+    setPassword("");
+    setConfirmPass("");
   };
 
   const handleSubmit = async () => {
@@ -70,7 +75,9 @@ export default function AuthScreen() {
     setGoogleLoading(true);
     clearError();
     try {
-      const redirectUri = AuthSession.makeRedirectUri({ scheme: "techjourney" });
+      const redirectUri = AuthSession.makeRedirectUri({
+        scheme: "techjourney",
+      });
       const discoveryUrl = "https://accounts.google.com";
       const discovery = await AuthSession.fetchDiscoveryAsync(discoveryUrl);
 
@@ -81,12 +88,19 @@ export default function AuthScreen() {
         responseType: AuthSession.ResponseType.Token,
       });
 
-      const result = await request.promptAsync(discovery, { showInRecents: true });
+      const result = await request.promptAsync(discovery, {
+        showInRecents: true,
+      });
 
       if (result.type === "success" && result.authentication?.accessToken) {
-        const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-          headers: { Authorization: `Bearer ${result.authentication.accessToken}` },
-        });
+        const res = await fetch(
+          "https://www.googleapis.com/oauth2/v3/userinfo",
+          {
+            headers: {
+              Authorization: `Bearer ${result.authentication.accessToken}`,
+            },
+          },
+        );
         const googleUser = await res.json();
         await loginWithGoogle({
           name: googleUser.name,
@@ -111,10 +125,11 @@ export default function AuthScreen() {
 
   const tabIndicatorLeft = slideAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ["2px", "50%"],
+    outputRange: [4, screenWidth / 2 + 4],
   });
 
-  const passwordsMatch = tab === "signup" && confirmPass.length > 0 && password !== confirmPass;
+  const passwordsMatch =
+    tab === "signup" && confirmPass.length > 0 && password !== confirmPass;
 
   return (
     <KeyboardAvoidingView
@@ -122,34 +137,98 @@ export default function AuthScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 }]}
+        contentContainerStyle={[
+          styles.scroll,
+          { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 40 },
+        ]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.logoSection}>
-          <View style={[styles.logoBox, { backgroundColor: colors.backgroundSecondary, borderColor: colors.cardBorder }]}>
+          <View
+            style={[
+              styles.logoBox,
+              {
+                backgroundColor: colors.backgroundSecondary,
+                borderColor: colors.cardBorder,
+              },
+            ]}
+          >
             <Feather name="code" size={32} color={colors.text} />
           </View>
-          <Text style={[styles.appName, { color: colors.text }]}>TechJourney</Text>
-          <Text style={[styles.tagline, { color: colors.textMuted }]}>Learn IT. Build Careers.</Text>
+          <Text style={[styles.appName, { color: colors.text }]}>
+            TechJourney
+          </Text>
+          <Text style={[styles.tagline, { color: colors.textMuted }]}>
+            Learn IT. Build Careers.
+          </Text>
         </View>
 
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-          <View style={[styles.tabBar, { backgroundColor: colors.backgroundSecondary }]}>
-            <Animated.View style={[styles.tabIndicator, { left: tabIndicatorLeft, backgroundColor: colors.background, borderColor: colors.cardBorder }]} />
-            <Pressable style={styles.tabBtn} onPress={() => switchTab("signin")}>
-              <Text style={[styles.tabText, { color: tab === "signin" ? colors.text : colors.textMuted }]}>Sign In</Text>
+        <View
+          style={[
+            styles.card,
+            { backgroundColor: colors.card, borderColor: colors.cardBorder },
+          ]}
+        >
+          <View
+            style={[
+              styles.tabBar,
+              { backgroundColor: colors.backgroundSecondary },
+            ]}
+          >
+            <Animated.View
+              style={[
+                styles.tabIndicator,
+                {
+                  left: tabIndicatorLeft,
+                  backgroundColor: colors.background,
+                  borderColor: colors.cardBorder,
+                },
+              ]}
+            />
+            <Pressable
+              style={styles.tabBtn}
+              onPress={() => switchTab("signin")}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  { color: tab === "signin" ? colors.text : colors.textMuted },
+                ]}
+              >
+                Sign In
+              </Text>
             </Pressable>
-            <Pressable style={styles.tabBtn} onPress={() => switchTab("signup")}>
-              <Text style={[styles.tabText, { color: tab === "signup" ? colors.text : colors.textMuted }]}>Sign Up</Text>
+            <Pressable
+              style={styles.tabBtn}
+              onPress={() => switchTab("signup")}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  { color: tab === "signup" ? colors.text : colors.textMuted },
+                ]}
+              >
+                Sign Up
+              </Text>
             </Pressable>
           </View>
 
           <View style={styles.form}>
             {tab === "signup" && (
               <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.textMuted }]}>Full Name</Text>
-                <View style={[styles.inputWrap, { borderColor: colors.cardBorder, backgroundColor: colors.backgroundSecondary }]}>
+                <Text style={[styles.inputLabel, { color: colors.textMuted }]}>
+                  Full Name
+                </Text>
+                <View
+                  style={[
+                    styles.inputWrap,
+                    {
+                      borderColor: colors.cardBorder,
+                      backgroundColor: colors.backgroundSecondary,
+                    },
+                  ]}
+                >
                   <Feather name="user" size={16} color={colors.textMuted} />
                   <TextInput
                     style={[styles.input, { color: colors.text }]}
@@ -165,8 +244,18 @@ export default function AuthScreen() {
             )}
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.textMuted }]}>Email</Text>
-              <View style={[styles.inputWrap, { borderColor: colors.cardBorder, backgroundColor: colors.backgroundSecondary }]}>
+              <Text style={[styles.inputLabel, { color: colors.textMuted }]}>
+                Email
+              </Text>
+              <View
+                style={[
+                  styles.inputWrap,
+                  {
+                    borderColor: colors.cardBorder,
+                    backgroundColor: colors.backgroundSecondary,
+                  },
+                ]}
+              >
                 <Feather name="mail" size={16} color={colors.textMuted} />
                 <TextInput
                   style={[styles.input, { color: colors.text }]}
@@ -183,14 +272,26 @@ export default function AuthScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: colors.textMuted }]}>Password</Text>
-              <View style={[styles.inputWrap, { borderColor: colors.cardBorder, backgroundColor: colors.backgroundSecondary }]}>
+              <Text style={[styles.inputLabel, { color: colors.textMuted }]}>
+                Password
+              </Text>
+              <View
+                style={[
+                  styles.inputWrap,
+                  {
+                    borderColor: colors.cardBorder,
+                    backgroundColor: colors.backgroundSecondary,
+                  },
+                ]}
+              >
                 <Feather name="lock" size={16} color={colors.textMuted} />
                 <TextInput
                   style={[styles.input, { color: colors.text }]}
                   value={password}
                   onChangeText={setPassword}
-                  placeholder={tab === "signup" ? "At least 6 characters" : "Your password"}
+                  placeholder={
+                    tab === "signup" ? "At least 6 characters" : "Your password"
+                  }
                   placeholderTextColor={colors.textMuted}
                   secureTextEntry={!showPass}
                   autoCapitalize="none"
@@ -198,16 +299,36 @@ export default function AuthScreen() {
                   onSubmitEditing={tab === "signin" ? handleSubmit : undefined}
                 />
                 <Pressable onPress={() => setShowPass(!showPass)}>
-                  <Feather name={showPass ? "eye-off" : "eye"} size={16} color={colors.textMuted} />
+                  <Feather
+                    name={showPass ? "eye-off" : "eye"}
+                    size={16}
+                    color={colors.textMuted}
+                  />
                 </Pressable>
               </View>
             </View>
 
             {tab === "signup" && (
               <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: colors.textMuted }]}>Confirm Password</Text>
-                <View style={[styles.inputWrap, { borderColor: passwordsMatch ? "#DC2626" : colors.cardBorder, backgroundColor: colors.backgroundSecondary }]}>
-                  <Feather name="lock" size={16} color={passwordsMatch ? "#DC2626" : colors.textMuted} />
+                <Text style={[styles.inputLabel, { color: colors.textMuted }]}>
+                  Confirm Password
+                </Text>
+                <View
+                  style={[
+                    styles.inputWrap,
+                    {
+                      borderColor: passwordsMatch
+                        ? "#DC2626"
+                        : colors.cardBorder,
+                      backgroundColor: colors.backgroundSecondary,
+                    },
+                  ]}
+                >
+                  <Feather
+                    name="lock"
+                    size={16}
+                    color={passwordsMatch ? "#DC2626" : colors.textMuted}
+                  />
                   <TextInput
                     style={[styles.input, { color: colors.text }]}
                     value={confirmPass}
@@ -236,27 +357,54 @@ export default function AuthScreen() {
             <Pressable
               onPress={handleSubmit}
               disabled={loading || passwordsMatch}
-              style={({ pressed }) => [styles.primaryBtn, { backgroundColor: colors.text, opacity: loading || passwordsMatch ? 0.5 : pressed ? 0.8 : 1 }]}
+              style={({ pressed }) => [
+                styles.primaryBtn,
+                {
+                  backgroundColor: colors.text,
+                  opacity: loading || passwordsMatch ? 0.5 : pressed ? 0.8 : 1,
+                },
+              ]}
             >
               {loading ? (
                 <ActivityIndicator color={colors.background} size="small" />
               ) : (
-                <Text style={[styles.primaryBtnText, { color: colors.background }]}>
+                <Text
+                  style={[styles.primaryBtnText, { color: colors.background }]}
+                >
                   {tab === "signin" ? "Sign In" : "Create Account"}
                 </Text>
               )}
             </Pressable>
 
             <View style={styles.dividerRow}>
-              <View style={[styles.dividerLine, { backgroundColor: colors.separator }]} />
-              <Text style={[styles.dividerText, { color: colors.textMuted }]}>or continue with</Text>
-              <View style={[styles.dividerLine, { backgroundColor: colors.separator }]} />
+              <View
+                style={[
+                  styles.dividerLine,
+                  { backgroundColor: colors.separator },
+                ]}
+              />
+              <Text style={[styles.dividerText, { color: colors.textMuted }]}>
+                or continue with
+              </Text>
+              <View
+                style={[
+                  styles.dividerLine,
+                  { backgroundColor: colors.separator },
+                ]}
+              />
             </View>
 
             <Pressable
               onPress={handleGoogle}
               disabled={googleLoading}
-              style={({ pressed }) => [styles.googleBtn, { borderColor: colors.cardBorder, backgroundColor: colors.backgroundSecondary, opacity: googleLoading ? 0.6 : pressed ? 0.7 : 1 }]}
+              style={({ pressed }) => [
+                styles.googleBtn,
+                {
+                  borderColor: colors.cardBorder,
+                  backgroundColor: colors.backgroundSecondary,
+                  opacity: googleLoading ? 0.6 : pressed ? 0.7 : 1,
+                },
+              ]}
             >
               {googleLoading ? (
                 <ActivityIndicator size="small" color={colors.text} />
@@ -265,7 +413,9 @@ export default function AuthScreen() {
                   <View style={styles.googleLogo}>
                     <Text style={styles.googleG}>G</Text>
                   </View>
-                  <Text style={[styles.googleBtnText, { color: colors.text }]}>Continue with Google</Text>
+                  <Text style={[styles.googleBtnText, { color: colors.text }]}>
+                    Continue with Google
+                  </Text>
                 </>
               )}
             </Pressable>
@@ -342,7 +492,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#DC262611",
     borderRadius: 8,
   },
-  errorText: { color: "#DC2626", fontSize: 13, fontFamily: "Inter_500Medium", flex: 1 },
+  errorText: {
+    color: "#DC2626",
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    flex: 1,
+  },
   primaryBtn: {
     height: 50,
     borderRadius: 12,
@@ -373,5 +528,9 @@ const styles = StyleSheet.create({
   },
   googleG: { color: "#fff", fontSize: 13, fontFamily: "Inter_700Bold" },
   googleBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold" },
-  footerText: { fontSize: 11, fontFamily: "Inter_400Regular", textAlign: "center" },
+  footerText: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+  },
 });
